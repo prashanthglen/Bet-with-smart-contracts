@@ -1,7 +1,7 @@
-# BlockBet
+# Bet-with-smart-contracts
 An attempt at creating a blockchain based betting platform using smart contracts with solidity.
 
-** NOTE: The code is yet to be tested **
+**NOTE: The code is yet to be tested**
 
 _I am still a beginner and am trying to learn blockchain technology. This is my first programming attempt with solidity._
 
@@ -11,4 +11,4 @@ The following is a solidity contract which creates a betting website by allowing
 - Add a function showing bets for vs against for each team.
 - Allow for changing odds.
 
-I do not plan to actually deploy this on the Ethereum blockchain. 
+I do not plan to actually deploy this on the Ethereum blockchain.
