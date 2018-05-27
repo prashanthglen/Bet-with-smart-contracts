@@ -1,142 +1,140 @@
 pragma solidity ^0.4.18;
-// We have to specify what version of compiler this code will compile with
 
 contract Betting {
-  /* mapping field below is equivalent to an associative array or hash.
-  The key of the mapping is candidate name stored as type bytes32 and value is
-  an unsigned integer to store the vote count
-  */
-  mapping (bytes32 => uint8) public betsReceived;
-  /* The same logic applies to this mapping variable: it tracks which address
-  has voted for which candidate (bytes32) throughout the voting */
-  mapping (bytes32 => mapping (address => uint256)) public bets;
-  /* This address specifies the owner of the contract in order to restrict access
-  to certain contract functions*/
-  address owner;
-  /* Boolean to verify if voting is still active */
-  bool votingActive = true;
-  /* winner */
-  bytes32 winner; 
-  uint256 numCandidates;
-  uint256 numvoters;
+    /* To store bets for each team from each address */
+    mapping (bytes32 => mapping (address => uint256)) public bets;
 
-  /* Events can be emitted by functions in order to notify listener (off-chain)
-  applications of the occurrence of a certain event */
-  event Print(bytes32[] _name);
+    /* The address of the owner */
+    address owner;
 
-  modifier onlyOwner() {
-    require(msg.sender == owner);
-    _;
-  }
+    /* Boolean to verify if betting period is active */
+    bool bettingActive = false;
 
-  /* Solidity doesn't let you pass in an array of strings in the constructor (yet).
-  We will use an array of bytes32 instead to store the list of candidates
-  */
-  bytes32[] public candidateList;
-  /* Adress array to store all addresses that have participated in the voting.*/
-  address[] public voters;
+    bytes32 winner;
+    uint256 numCandidates;
+    uint256 numvoters;
 
-  /* This is the constructor which will be called once when you
-  deploy the contract to the blockchain. When we deploy the contract,
-  we will pass an array of candidates who will be contesting in the election.
-  In recent version of Solidity the constructor has been replaced by the
-  contract name without function keyword: Voting(...) - equivalent to Java syntax.
-  */
-  constructor() public {
-    owner = msg.sender;
-    numCandidates = 0;
-  }
+    /* All candidates stored as string of bytes as solidity does not support strings */
+    bytes32[] public candidateList;
 
-  /* Getter function that returns candidate list. */
-  function getCandidateList() public constant returns (bytes32[]) {
-      return candidateList;
-  }
+    /* Address array to store all addresses that have participated in the betting. */
+    address[] public betters;
 
-  /* Getter function that returns contract owner address */
-  function getOwner() public constant returns (address) {
-      return owner;
-  }
+    /* Events can be emitted by functions in order to notify listener (off-chain)
+     * applications of the occurrence of a certain event
+     */
+    event Print(bytes32[] _name);
 
-  /* Getter function that returns the number of candidates */
-  function getCount() public constant returns (uint256) {
-      return candidateList.length;
-  }
-
-  function getBalance() public constant returns (uint256) {
-      return address(this).balance;
-  }
-
-  //Function that adds candidate to candidate list. Can only be called by owner.
-  function addCandidate(bytes32 candidate) onlyOwner public returns (bool) {
-      candidateList.push(candidate);
-      numCandidates += 1;
-      return true;
-  }
-
-  //Function that adds candidate to candidate list. Can only be called by owner.
-  function addWinner(bytes32 selectedwinner) onlyOwner public returns (bool) {
-      winner = selectedwinner;
-      return true;
-  }
-
-  // This function returns the total votes a candidate has received so far.
-  function totalVotesFor(bytes32 candidate) view public returns (uint8) {
-    require(validCandidate(candidate));
-    return betsReceived[candidate];
-  }
-
-  // This function increments the vote count for the specified candidate. This
-  // is equivalent to casting a vote.
-  function betOnCandidate(bytes32 candidate) public payable  {
-    require(msg.value >= 1 ether);
-    require(validCandidate(candidate));
-    // require(bets[msg.sender] == 0x0);
-    voters.push(msg.sender);
-    bets[candidate][msg.sender] += msg.value;
-    betsReceived[candidate] += 1;
-  }
-
-  // This function checks if the provided candidate is element of the candidate
-  // list and returns a boolean.
-  function validCandidate(bytes32 candidate) view public returns (bool) {
-    for(uint i = 0; i < candidateList.length; i++) {
-      if (candidateList[i] == candidate) {
-        return true;
-      }
+    /* Runs before certain functions to ensure that the owner runs this */
+    modifier onlyOwner() {
+        require(msg.sender == owner);
+        _;
     }
-    return false;
-  }
-  
-  function getWinner() public returns (uint256) {
-    if (numCandidates == 0) return;
-    return (uint(keccak256(block.blockhash(block.number - 1))) % numCandidates);
-  }
 
-  // Function to close voting and handle payout. Can only be called by the owner.
-  function closeVoting() onlyOwner public returns (bytes32) {
-      require(votingActive);
-      uint winningVotes = 0;
-      bytes32 winningCandidate = candidateList[getWinner()];
-      /*for (uint p = 0; p < candidateList.length; p++) {
-          if (betsReceived[candidateList[p]] > winningVotes) {
-              winningVotes = betsReceived[candidateList[p]];
-              winningCandidate = candidateList[p];
-          }
-      }*/
-      uint256 remaining = (address(this).balance) * 4 / 5;
-      address[] storage winners;
-      for (uint x = 0; x < voters.length; x++) {
-          if (bets[winningCandidate][voters[x]] > 0) {
-              require(address(this).balance >= prize + 1);
-              winners.push(voters[x]);
-          }
-      }
-      
-      uint256 prize = remaining * 1 / 5;
-      for (uint x1 = 0; x1 < winners.length; x1++) {
-              winners[x1].transfer(prize);
-      }
-      votingActive = false;
-      return winningCandidate;
-  }
+    /* Constructor */
+    constructor() public {
+        owner = msg.sender;
+        numCandidates = 0;
+    }
+
+    /* Getter function that returns candidate list. */
+    function getCandidateList() public constant returns (bytes32[]) {
+        return candidateList;
+    }
+
+    /* Getter function that returns contract owner address */
+    function getOwner() public constant returns (address) {
+        return owner;
+    }
+
+    /* Getter function that returns the number of candidates */
+    function getCount() public constant returns (uint256) {
+        return candidateList.length;
+    }
+
+    /* Returns the total balance involved in bets */
+    function getBalance() public constant returns (uint256) {
+        return address(this).balance;
+    }
+
+    /* Function that adds candidate to candidate list. Can only be called by owner. */
+    function addCandidate(bytes32 candidate) onlyOwner public returns (bool) {
+        candidateList.push(candidate);
+        numCandidates += 1;
+        return true;
+    }
+
+    /* Function that inputs data about the winner. Can only be called by owner. */
+    function addWinner(bytes32 selectedwinner) onlyOwner public returns (bool) {
+        winner = selectedwinner;
+        return true;
+    }
+
+    /* Function to enable betting */
+    function beginVotingPeriod() onlyOwner public returns(bool) {
+        bettingActive = true;
+        return true;
+    }
+
+    /* This function increments the vote count for the specified candidate. This
+     * is equivalent to casting a vote
+     */
+    function betOnCandidate(bytes32 candidate) public payable  {
+        require(bettingActive);
+        require(msg.value >= 1 ether);
+        require(validCandidate(candidate));
+        betters.push(msg.sender);
+        bets[candidate][msg.sender] += msg.value;
+    }
+
+    /* This function checks if the provided candidate is valid
+     * list and returns a boolean.
+     */
+    function validCandidate(bytes32 candidate) view public returns (bool) {
+        for(uint i = 0; i < candidateList.length; i++) {
+            if (candidateList[i] == candidate) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /* An implementation for randomly selecting a winner (for debugging!) */
+    function getWinner() view public returns (uint256) {
+        if (numCandidates == 0) return;
+        return (uint256(keccak256(abi.encodePacked(blockhash(block.number - 1)))) % numCandidates);
+    }
+
+    /* Function to close voting and handle payout. Can only be called by the owner. */
+    function closeVoting() onlyOwner public returns (bool) {
+        require(bettingActive);
+        bytes32 winningCandidate = candidateList[getWinner()];
+
+        // getting list of winners and losers
+        // and the money lost by all losers
+        address[] memory winners;
+        uint256 numWinners = 0;
+        uint256 numLosers = 0;
+        uint256 surplus = 0;
+        for (uint x = 0; x < betters.length; x++) {
+            if (bets[winningCandidate][betters[x]] > 0) {
+                winners[numWinners++] = betters[x];
+            } else {
+                surplus += bets[winningCandidate][betters[x]];
+                numLosers++;
+            }
+        }
+
+        // keeping 10% as service fee and distribute rest among the winners
+        uint256 prize = surplus * 9 / 10;
+        // calculate prize per winner
+        prize = prize / numLosers;
+        // distribute the prize to the winners alongwith the money they bet in
+        for (x = 0; x < winners.length; x++) {
+            winners[x].transfer(prize + bets[winningCandidate][winners[x]]);
+        }
+        // Close the betting period
+        bettingActive = false;
+        return true;
+    }
 }
